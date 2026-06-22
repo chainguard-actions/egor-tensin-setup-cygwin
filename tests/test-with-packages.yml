@@ -1,0 +1,36 @@
+name: Test Cygwin installation with packages
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          platform: x64
+          packages: curl wget
+
+      - name: Assert Cygwin is installed
+        shell: pwsh
+        run: |
+          $bash = "C:\tools\cygwin\bin\bash.exe"
+          if (-not (Test-Path $bash)) {
+            Write-Error "FAIL: Cygwin bash not found at $bash"
+            exit 1
+          }
+          Write-Host "PASS: Cygwin bash found"
+
+      - name: Assert curl package is installed
+        shell: cmd
+        run: |
+          bash --login -c "which curl && echo PASS: curl found || (echo FAIL: curl not found && exit 1)"
+          if %ERRORLEVEL% neq 0 exit /b 1
+
+      - name: Assert wget package is installed
+        shell: cmd
+        run: |
+          bash --login -c "which wget && echo PASS: wget found || (echo FAIL: wget not found && exit 1)"
+          if %ERRORLEVEL% neq 0 exit /b 1

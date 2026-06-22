@@ -1,0 +1,39 @@
+name: Test Cygwin with hardlinks enabled
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          platform: x64
+          hardlinks: '1'
+
+      - name: Assert Cygwin is installed
+        shell: pwsh
+        run: |
+          $bash = "C:\tools\cygwin\bin\bash.exe"
+          if (-not (Test-Path $bash)) {
+            Write-Error "FAIL: Cygwin bash not found at $bash"
+            exit 1
+          }
+          Write-Host "PASS: Cygwin bash found"
+
+      - name: Assert no symlinks remain in /usr/bin
+        shell: cmd
+        run: |
+          bash --login -c "symlinks=$(find /usr/bin -type l | wc -l); echo \"Remaining symlinks: $symlinks\"; if [ \"$symlinks\" -gt 0 ]; then echo FAIL: symlinks still present; find /usr/bin -type l; exit 1; fi; echo PASS: no symlinks in /usr/bin"
+          if %ERRORLEVEL% neq 0 exit /b 1
+
+      - name: Assert Cygwin bash still works after hardlink conversion
+        shell: cmd
+        run: |
+          bash --login -c "echo PASS: bash works after hardlink conversion"
+          if %ERRORLEVEL% neq 0 (
+            echo FAIL: bash failed after hardlink conversion
+            exit /b 1
+          )

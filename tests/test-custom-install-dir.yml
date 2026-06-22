@@ -1,0 +1,56 @@
+name: Test Cygwin with custom install directory
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          platform: x64
+          install-dir: C:\cygwin-custom
+          env: nodosfilewarning
+
+      - name: Assert Cygwin installed in custom directory
+        shell: pwsh
+        run: |
+          $bash = "C:\cygwin-custom\bin\bash.exe"
+          if (-not (Test-Path $bash)) {
+            Write-Error "FAIL: Cygwin bash not found at $bash"
+            exit 1
+          }
+          Write-Host "PASS: Cygwin bash found at custom directory $bash"
+
+      - name: Assert custom bin dir is on PATH
+        shell: pwsh
+        run: |
+          $cygwinBin = "C:\cygwin-custom\bin"
+          $pathEntries = $env:PATH -split ';'
+          if ($pathEntries -notcontains $cygwinBin) {
+            Write-Error "FAIL: $cygwinBin not found in PATH"
+            exit 1
+          }
+          Write-Host "PASS: $cygwinBin is on PATH"
+
+      - name: Assert CYGWIN env var is set
+        shell: pwsh
+        run: |
+          $cygwinEnv = $env:CYGWIN
+          Write-Host "CYGWIN env var: '$cygwinEnv'"
+          if ($cygwinEnv -ne 'nodosfilewarning') {
+            Write-Error "FAIL: expected CYGWIN='nodosfilewarning', got '$cygwinEnv'"
+            exit 1
+          }
+          Write-Host "PASS: CYGWIN env var is set correctly"
+
+      - name: Assert Cygwin bash runs from custom dir
+        shell: cmd
+        run: |
+          C:\cygwin-custom\bin\bash.exe --login -c "echo PASS: Cygwin bash works from custom dir"
+          if %ERRORLEVEL% neq 0 (
+            echo FAIL: bash exited with error
+            exit /b 1
+          )

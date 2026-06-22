@@ -1,0 +1,29 @@
+name: Test Cygwin CYGWIN environment variable
+# Tests that the env input correctly sets the CYGWIN environment variable.
+# Requires a Windows runner with Chocolatey available.
+on:
+  workflow_dispatch:
+
+jobs:
+  test-env-var:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Cygwin with CYGWIN env var set
+        id: action
+        uses: .
+        with:
+          install-dir: C:\tools\cygwin
+          env: nodosfilewarning
+
+      - name: Assert CYGWIN environment variable is set
+        shell: pwsh
+        run: |
+          $cygwinEnv = $env:CYGWIN
+          Write-Host "CYGWIN env var value: '$cygwinEnv'"
+          if ($cygwinEnv -ne 'nodosfilewarning') {
+            Write-Error "FAIL: expected CYGWIN='nodosfilewarning', got '$cygwinEnv'"
+            exit 1
+          }
+          Write-Host "PASS: CYGWIN environment variable is correctly set"

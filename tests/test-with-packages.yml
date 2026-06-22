@@ -1,0 +1,44 @@
+name: Test Cygwin installation with packages
+# Tests Cygwin installation with additional packages specified.
+# Requires a Windows runner with Chocolatey available.
+on:
+  workflow_dispatch:
+
+jobs:
+  test-with-packages:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Cygwin with packages
+        id: action
+        uses: .
+        with:
+          install-dir: C:\tools\cygwin
+          packages: curl wget
+
+      - name: Assert curl is available in Cygwin
+        shell: pwsh
+        run: |
+          $curl = Join-Path 'C:\tools\cygwin' 'bin' 'curl.exe'
+          if (-not (Test-Path $curl)) {
+            Write-Error "FAIL: curl.exe not found at $curl"
+            exit 1
+          }
+          Write-Host "PASS: curl found at $curl"
+
+      - name: Assert wget is available in Cygwin
+        shell: pwsh
+        run: |
+          $wget = Join-Path 'C:\tools\cygwin' 'bin' 'wget.exe'
+          if (-not (Test-Path $wget)) {
+            Write-Error "FAIL: wget.exe not found at $wget"
+            exit 1
+          }
+          Write-Host "PASS: wget found at $wget"
+
+      - name: Run curl via Cygwin bash
+        shell: bash
+        run: |
+          which curl
+          echo "PASS: curl is accessible from Cygwin bash"

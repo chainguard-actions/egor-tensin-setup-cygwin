@@ -1,0 +1,45 @@
+name: Test basic Cygwin installation
+# Tests basic Cygwin installation with default settings on Windows.
+# Requires a Windows runner with Chocolatey available.
+on:
+  workflow_dispatch:
+
+jobs:
+  test-basic-install:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Cygwin with defaults
+        id: action
+        uses: .
+        with:
+          install-dir: C:\tools\cygwin
+
+      - name: Assert Cygwin bash is available
+        shell: pwsh
+        run: |
+          $bash = Join-Path 'C:\tools\cygwin' 'bin' 'bash.exe'
+          if (-not (Test-Path $bash)) {
+            Write-Error "FAIL: bash.exe not found at $bash"
+            exit 1
+          }
+          Write-Host "PASS: Cygwin bash found at $bash"
+
+      - name: Assert Cygwin bin is on PATH
+        shell: pwsh
+        run: |
+          $cygwinBin = Join-Path 'C:\tools\cygwin' 'bin'
+          $pathEntries = $env:PATH -split ';'
+          $found = $pathEntries | Where-Object { $_ -eq $cygwinBin }
+          if (-not $found) {
+            Write-Error "FAIL: Cygwin bin directory '$cygwinBin' not found in PATH"
+            exit 1
+          }
+          Write-Host "PASS: Cygwin bin directory is on PATH"
+
+      - name: Assert bash runs correctly
+        shell: bash
+        run: |
+          echo "PASS: bash shell is functional"
+          bash --version

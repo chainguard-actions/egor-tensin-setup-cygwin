@@ -1,0 +1,119 @@
+name: Install Cygwin
+description: Install Cygwin & packages
+inputs:
+  install-dir:
+    description: Installation directory
+    required: false
+    default: C:\tools\cygwin
+  packages:
+    description: Packages to install, separated by a space
+    required: false
+  env:
+    description: Value to set as the CYGWIN environment variable
+    required: false
+  hardlinks:
+    description: Convert symlinks in /usr/bin to hardlinks
+    required: false
+    default: 0
+runs:
+  using: composite
+  steps:
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
+    - env:
+        RUNNER_OS: ${{ runner.os }}
+      run: |
+        New-Variable os -Value ($env:RUNNER_OS) -Option Constant
+        New-Variable windows_host -Value ($os -eq 'Windows') -Option Constant
+
+        if (!$windows_host) {
+            throw "Sorry, installing Cygwin is unsupported on $os"
+        }
+      shell: pwsh
+    - env:
+        INPUT_ENV: ${{ inputs.env }}
+      run: |
+        $safe_env = ($env:INPUT_ENV -replace '[\r\n]', '')
+        echo "CYGWIN=$safe_env" >> $env:GITHUB_ENV
+      shell: pwsh
+    - env:
+        INPUT_INSTALL_DIR: ${{ inputs.install-dir }}
+        INPUT_PACKAGES: ${{ inputs.packages }}
+      run: |
+        New-Variable install_dir -Value ($env:INPUT_INSTALL_DIR -replace '[\r\n]', '') -Option Constant
+        New-Variable packages -Value ($env:INPUT_PACKAGES) -Option Constant
+
+        function Locate-Choco {
+            $path = Get-Command 'choco' -ErrorAction SilentlyContinue
+            if ($path) {
+                $path.Path
+            } else {
+                Join-Path ${env:ProgramData} 'chocolatey' 'bin' 'choco'
+            }
+        }
+
+        $choco = Locate-Choco
+
+        $choco_params = @(
+            'upgrade',
+            'cygwin',
+            '-y',
+            '--no-progress',
+            "--package-parameters='/InstallDir:$install_dir'"
+        )
+        # Assuming that Cygwin is not installed when this is run.
+        & $choco $choco_params
+
+        # /usr/bin is really just /bin on Cygwin.
+        $safe_bin = (Join-Path $install_dir bin) -replace '[\r\n]', ''
+        $safe_usr_local_bin = (Join-Path $install_dir usr local bin) -replace '[\r\n]', ''
+        echo $safe_bin >> $env:GITHUB_PATH
+        echo $safe_usr_local_bin >> $env:GITHUB_PATH
+
+        $pkg_list = $packages.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
+        if ($pkg_list.Count -gt 0) {
+            & $choco install $pkg_list -y --no-progress --source=cygwin
+        }
+      shell: pwsh
+    - env:
+        INPUT_INSTALL_DIR: ${{ inputs.install-dir }}
+        INPUT_HARDLINKS: ${{ inputs.hardlinks }}
+      run: |
+        New-Variable install_dir -Value ($env:INPUT_INSTALL_DIR -replace '[\r\n]', '') -Option Constant
+        New-Variable hardlinks -Value ($env:INPUT_HARDLINKS -eq '1') -Option Constant
+
+        if ($hardlinks) {
+            New-Variable bash -Value (Join-Path $install_dir bin bash.exe) -Option Constant
+            echo @'
+        while IFS= read -d '' -r link_path; do
+            dest_path="$( readlink --canonicalize-existing -- "$link_path" )"
+            dest_ext=".${dest_path##*.}"
+            [ "$dest_ext" == ".$dest_path" ] && dest_ext=
+            link_ext=".${link_path##*.}"
+            [ "$link_ext" == ".$link_path" ] && link_ext=
+            echo "Removing symlink $link_path" && rm -f -- "$link_path"
+            [ "$link_ext" != "$dest_ext" ] && echo "${PATHEXT//\;/
+        }" | grep -q --ignore-case --line-regexp -F -- "$dest_ext" && link_path="$link_path$dest_ext"
+            echo "Creating hardlink $link_path -> $dest_path" && ln -- "$dest_path" "$link_path"
+        done < <( find /usr/bin -type l -print0 )
+        '@ | & $bash --login -o errexit -o nounset -o pipefail -o igncr
+        }
+      shell: pwsh
+branding:
+  icon: star
+  color: green

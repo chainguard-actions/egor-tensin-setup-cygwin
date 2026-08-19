@@ -1,42 +1,31 @@
 name: Test Cygwin installation with hardlinks
-# Tests Cygwin installation with hardlinks=1 to convert symlinks to hardlinks.
-# Requires a Windows runner with Chocolatey available.
 on:
   workflow_dispatch:
-
 jobs:
-  test-hardlinks:
+  test:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Install Cygwin with hardlinks enabled
-        id: action
+      - id: action
         uses: .
         with:
           install-dir: C:\tools\cygwin
           hardlinks: '1'
-
       - name: Assert Cygwin is installed
         shell: pwsh
         run: |
-          $bash = Join-Path 'C:\tools\cygwin' 'bin' 'bash.exe'
-          if (-not (Test-Path $bash)) {
-            Write-Error "FAIL: bash.exe not found at $bash"
+          if (-not (Test-Path 'C:\tools\cygwin\bin\bash.exe')) {
+            Write-Host "FAIL: bash.exe not found in install dir"
             exit 1
           }
-          Write-Host "PASS: Cygwin bash found at $bash"
-
-      - name: Assert no symlinks remain in /usr/bin
-        shell: pwsh
+          Write-Host "PASS: Cygwin installed successfully"
+      - name: Assert no symlinks remain in bin (hardlinks converted)
+        shell: C:\tools\cygwin\bin\bash.exe --login -o errexit -o nounset -o pipefail {0}
         run: |
-          $bash = Join-Path 'C:\tools\cygwin' 'bin' 'bash.exe'
-          # Run a bash script to check for remaining symlinks in /usr/bin
-          $result = & $bash --login -c 'find /usr/bin -type l | wc -l'
-          $symlinkCount = [int]($result.Trim())
-          Write-Host "Remaining symlinks in /usr/bin: $symlinkCount"
-          if ($symlinkCount -gt 0) {
-            Write-Error "FAIL: Found $symlinkCount symlinks remaining in /usr/bin after hardlink conversion"
+          symlink_count=$(find /usr/bin -type l | wc -l)
+          echo "Symlink count in /usr/bin: $symlink_count"
+          if [ "$symlink_count" -gt 0 ]; then
+            echo "FAIL: expected 0 symlinks in /usr/bin but found $symlink_count"
             exit 1
-          }
-          Write-Host "PASS: No symlinks remain in /usr/bin"
+          fi
+          echo "PASS: no symlinks remain in /usr/bin"

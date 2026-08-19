@@ -40,9 +40,9 @@ runs:
           -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     - env:
-        INPUT_RUNNER_OS: ${{ runner.os }}
+        RUNNER_OS: ${{ runner.os }}
       run: |
-        New-Variable os -Value ($env:INPUT_RUNNER_OS) -Option Constant
+        New-Variable os -Value ($env:RUNNER_OS) -Option Constant
         New-Variable windows_host -Value ($os -eq 'Windows') -Option Constant
 
         if (!$windows_host) {
@@ -61,7 +61,7 @@ runs:
         INPUT_PACKAGES: ${{ inputs.packages }}
       run: |
         New-Variable x64 -Value ($env:INPUT_PLATFORM -eq 'x64') -Option Constant
-        New-Variable install_dir -Value ($env:INPUT_INSTALL_DIR -replace '[\r\n]', '') -Option Constant
+        New-Variable install_dir -Value ($env:INPUT_INSTALL_DIR) -Option Constant
         New-Variable packages -Value ($env:INPUT_PACKAGES) -Option Constant
 
         function Locate-Choco {
@@ -94,8 +94,8 @@ runs:
         & $choco $choco_params
 
         # /usr/bin is really just /bin on Cygwin.
-        $safe_bin = (Join-Path $install_dir bin) -replace '[\r\n]', ''
-        $safe_usr_local_bin = (Join-Path $install_dir usr local bin) -replace '[\r\n]', ''
+        $safe_bin = ((Join-Path $install_dir bin) -replace '[\r\n]', '')
+        $safe_usr_local_bin = ((Join-Path $install_dir usr local bin) -replace '[\r\n]', '')
         echo $safe_bin >> $env:GITHUB_PATH
         echo $safe_usr_local_bin >> $env:GITHUB_PATH
 

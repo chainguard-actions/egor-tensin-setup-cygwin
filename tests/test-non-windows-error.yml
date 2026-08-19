@@ -1,0 +1,30 @@
+name: Test non-Windows error handling
+# This action only supports Windows. Under act (Linux), the action should
+# fail with a clear error message. This test verifies that error path.
+on:
+  workflow_dispatch:
+
+jobs:
+  test-non-windows-error:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Attempt to install Cygwin on non-Windows (expect failure)
+        id: action
+        uses: .
+        with:
+          platform: x64
+          packages: ''
+        continue-on-error: true
+
+      - name: Assert action failed on non-Windows
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail on non-Windows runner, but got outcome=$OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly failed on non-Windows runner"

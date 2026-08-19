@@ -1,4 +1,4 @@
-name: Test hardlinks input on non-Windows
+name: Test non-Windows error
 on:
   workflow_dispatch:
 jobs:
@@ -11,7 +11,6 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          hardlinks: '1'
           packages: ''
 
       - name: Assert action failed on non-Windows
@@ -20,7 +19,7 @@ jobs:
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" != "failure" ]; then
-            echo "FAIL: expected action to fail on non-Windows host (even with hardlinks=1), but got outcome=$OUTCOME"
+            echo "FAIL: expected action to fail on non-Windows host, but got outcome=$OUTCOME"
             exit 1
           fi
-          echo "PASS: action correctly failed on non-Windows host even with hardlinks=1"
+          echo "PASS: action correctly failed on non-Windows host"

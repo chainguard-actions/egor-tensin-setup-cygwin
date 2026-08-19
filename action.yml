@@ -35,9 +35,7 @@ runs:
         curl "${args[@]}" \
           -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
-    - env:
-        RUNNER_OS: ${{ runner.os }}
-      run: |
+    - run: |
         New-Variable os -Value ($env:RUNNER_OS) -Option Constant
         New-Variable windows_host -Value ($os -eq 'Windows') -Option Constant
 
@@ -45,18 +43,17 @@ runs:
             throw "Sorry, installing Cygwin is unsupported on $os"
         }
       shell: pwsh
-    - env:
-        INPUT_ENV: ${{ inputs.env }}
-      run: |
-        $safe_env = ($env:INPUT_ENV -replace '[\r\n]', '')
+      env:
+        RUNNER_OS: ${{ runner.os }}
+    - run: |
+        $safe_env = $env:INPUT_ENV -replace '[\r\n]', ''
         echo "CYGWIN=$safe_env" >> $env:GITHUB_ENV
       shell: pwsh
-    - env:
-        INPUT_INSTALL_DIR: ${{ inputs.install-dir }}
-        INPUT_PACKAGES: ${{ inputs.packages }}
-      run: |
-        New-Variable install_dir -Value ($env:INPUT_INSTALL_DIR -replace '[\r\n]', '') -Option Constant
-        New-Variable packages -Value ($env:INPUT_PACKAGES) -Option Constant
+      env:
+        INPUT_ENV: ${{ inputs.env }}
+    - run: |
+        New-Variable install_dir -Value $env:INPUT_INSTALL_DIR -Option Constant
+        New-Variable packages -Value $env:INPUT_PACKAGES -Option Constant
 
         function Locate-Choco {
             $path = Get-Command 'choco' -ErrorAction SilentlyContinue
@@ -85,21 +82,20 @@ runs:
         & $choco $choco_params
 
         # /usr/bin is really just /bin on Cygwin.
-        $safe_bin = (Join-Path $install_dir bin) -replace '[\r\n]', ''
-        $safe_usr_local_bin = (Join-Path $install_dir usr local bin) -replace '[\r\n]', ''
-        echo $safe_bin >> $env:GITHUB_PATH
-        echo $safe_usr_local_bin >> $env:GITHUB_PATH
+        $safe_bin = ($install_dir -replace '[\r\n]', '')
+        echo (Join-Path $safe_bin bin) >> $env:GITHUB_PATH
+        echo (Join-Path $safe_bin usr local bin) >> $env:GITHUB_PATH
 
         $pkg_list = $packages.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
         if ($pkg_list.Count -gt 0) {
             & $choco install $pkg_list -y --no-progress --source=cygwin
         }
       shell: pwsh
-    - env:
+      env:
         INPUT_INSTALL_DIR: ${{ inputs.install-dir }}
-        INPUT_HARDLINKS: ${{ inputs.hardlinks }}
-      run: |
-        New-Variable install_dir -Value ($env:INPUT_INSTALL_DIR) -Option Constant
+        INPUT_PACKAGES: ${{ inputs.packages }}
+    - run: |
+        New-Variable install_dir -Value $env:INPUT_INSTALL_DIR -Option Constant
         New-Variable hardlinks -Value ($env:INPUT_HARDLINKS -eq '1') -Option Constant
 
         if ($hardlinks) {
@@ -119,6 +115,9 @@ runs:
         '@ | & $bash --login -o errexit -o nounset -o pipefail -o igncr
         }
       shell: pwsh
+      env:
+        INPUT_INSTALL_DIR: ${{ inputs.install-dir }}
+        INPUT_HARDLINKS: ${{ inputs.hardlinks }}
 branding:
   icon: star
   color: green

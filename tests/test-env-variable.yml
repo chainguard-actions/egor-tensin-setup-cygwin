@@ -1,0 +1,25 @@
+name: Test CYGWIN environment variable setting
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          install-dir: 'C:\tools\cygwin'
+          env: 'nodosfilewarning'
+
+      - name: Assert CYGWIN environment variable is set
+        shell: pwsh
+        run: |
+          $cygwin_env = $env:CYGWIN
+          Write-Host "CYGWIN env var: '$cygwin_env'"
+          if ($cygwin_env -ne 'nodosfilewarning') {
+            Write-Host "FAIL: expected CYGWIN='nodosfilewarning', got '$cygwin_env'"
+            exit 1
+          }
+          Write-Host "PASS: CYGWIN environment variable is set correctly"

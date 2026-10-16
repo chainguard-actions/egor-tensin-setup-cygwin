@@ -1,0 +1,34 @@
+name: Test basic Cygwin installation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          install-dir: 'C:\tools\cygwin'
+
+      - name: Assert Cygwin bin directory is on PATH
+        shell: pwsh
+        run: |
+          $path = $env:PATH
+          Write-Host "PATH: $path"
+          if ($path -notlike '*C:\tools\cygwin\bin*' -and $path -notlike '*C:/tools/cygwin/bin*') {
+            Write-Host "FAIL: Cygwin bin directory not found in PATH"
+            exit 1
+          }
+          Write-Host "PASS: Cygwin bin directory is on PATH"
+
+      - name: Assert bash is available
+        shell: pwsh
+        run: |
+          $bash = Get-Command 'bash' -ErrorAction SilentlyContinue
+          if (-not $bash) {
+            Write-Host "FAIL: bash not found after Cygwin installation"
+            exit 1
+          }
+          Write-Host "PASS: bash found at $($bash.Path)"

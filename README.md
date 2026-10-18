@@ -13,6 +13,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v4.0.2 | [`v4.0.2`](https://github.com/chainguard-actions/egor-tensin-setup-cygwin/tree/v4.0.2) | [`fca9069`](https://github.com/egor-tensin/setup-cygwin/commit/fca9069f92361187d4abfaa5d8a7490e435d8349) |
 | v4.0.3 | [`v4.0.3`](https://github.com/chainguard-actions/egor-tensin-setup-cygwin/tree/v4.0.3) | [`b19b010`](https://github.com/egor-tensin/setup-cygwin/commit/b19b01019274b2d3cc61a24a47bf959ede488432) |
 | v4.0.4 | [`v4.0.4`](https://github.com/chainguard-actions/egor-tensin-setup-cygwin/tree/v4.0.4) | [`7d7505b`](https://github.com/egor-tensin/setup-cygwin/commit/7d7505bd2f01c9a617e06e28fda44c5c46c4686d) |
+| v4.0.5 | [`v4.0.5`](https://github.com/chainguard-actions/egor-tensin-setup-cygwin/tree/v4.0.5) | [`9d87fac`](https://github.com/egor-tensin/setup-cygwin/commit/9d87facad6e2e0dc56614ec6edf86dbc60dcda39) |
 
 ## Privacy
 

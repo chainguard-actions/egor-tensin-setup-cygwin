@@ -37,18 +37,16 @@ runs:
         curl "${args[@]}" \
           -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
-    - env:
-        RUNNER_OS_VAL: ${{ runner.os }}
-      run: |
-        if ($env:RUNNER_OS_VAL -ne 'Windows') {
-            throw "Sorry, installing Cygwin is unsupported on $env:RUNNER_OS_VAL"
+    - run: |
+        if ($env:RUNNER_OS -ne 'Windows') {
+            throw "Sorry, installing Cygwin is unsupported on $env:RUNNER_OS"
         }
       shell: pwsh
 
     - env:
         ARG_ENV: ${{ inputs.env }}
       run: |
-        $safe_env = $env:ARG_ENV -replace "`r", "" -replace "`n", ""
+        $safe_env = "$env:ARG_ENV" -replace "`r", "" -replace "`n", ""
         echo "CYGWIN=$safe_env" >> $env:GITHUB_ENV
       shell: pwsh
 
@@ -81,8 +79,8 @@ runs:
         & $choco $choco_params
 
         # /usr/bin is really just /bin on Cygwin.
-        echo (Join-Path $install_dir bin) >> $env:GITHUB_PATH
-        echo (Join-Path $install_dir usr local bin) >> $env:GITHUB_PATH
+        echo ((Join-Path $install_dir bin) -replace "`r", "" -replace "`n", "") >> $env:GITHUB_PATH
+        echo ((Join-Path $install_dir usr local bin) -replace "`r", "" -replace "`n", "") >> $env:GITHUB_PATH
 
         $packages = $packages.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
         if ($packages.Count -gt 0) {
